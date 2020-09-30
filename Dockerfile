@@ -1,6 +1,6 @@
 FROM httpd:2.4.46-alpine
 
-COPY ./mr_project /var/www/html/mr_project
+COPY ./de_project /var/www/html/de_project
 ADD ./docker/httpd.conf /usr/local/apache2/conf/httpd.conf
 ADD ./docker/entrypoint.sh /entrypoint.sh
 ADD ./requirements.txt /tmp/requirements.txt
