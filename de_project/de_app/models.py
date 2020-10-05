@@ -6,14 +6,12 @@ class Metric(models.Model):
     current_value = models.IntegerField(default=0)
     total_value = models.IntegerField(default=0)
     average_value = models.IntegerField(default=0)
-    # is_valid = False
 
     def __str__(self):
         return self.name
 
     def validate(self):
         #Other validation can be done here
-        # self.is_valid = True
         self.save()
 
     def reset(self):
@@ -31,11 +29,9 @@ class Record(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True, blank=True)
     location = models.CharField(default="", max_length=255)
     metrics = models.ManyToManyField(Metric)
-    # is_valid = False
 
     def validate(self):
         #Other validation can be done here
-        # self.is_valid = True
         self.save()
 
     def create_metrics(self, metric_names_to_create = []):

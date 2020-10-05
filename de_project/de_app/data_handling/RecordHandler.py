@@ -1,4 +1,5 @@
 from ..models import Metric, Record
+from datetime import datetime, timedelta
 from django.core import serializers
 
 class RecordHandler:
@@ -43,7 +44,6 @@ class RecordHandler:
         return ret
 
     def clean_data(self):
-        # self.records = [ r for r in self.records if r.is_valid ]
         self.records.sort(key=lambda r: r.timestamp)
 
     def calculate_trends(self, bin_days=7):
@@ -51,7 +51,7 @@ class RecordHandler:
         
         #calculate moving average of bin_days
         for r in self.records:
-            first_record_timestamp = r.timestamp - datetime.timedelta(days = bin_days)
+            first_record_timestamp = r.timestamp - timedelta(days = bin_days)
             #TODO: this will be slow on large data sets.
             record_subset = [ r for r in self.records if r.timestamp > first_record_timestamp and r.timestamp <= r.timestamp ]
             for m in self.metrics_buffer:
@@ -59,7 +59,9 @@ class RecordHandler:
                 for s in record_subset:
                     m.total_value += s.get_metric(m.name).current_value
                 current_metric = r.get_metric(m.name)
-                current_metric.average_value = current_metric.current_value / m.total_value
+                current_metric.average_value = current_metric.current_value
+                if m.total_value:
+                     current_metric.average_value /= m.total_value
 
 
 
