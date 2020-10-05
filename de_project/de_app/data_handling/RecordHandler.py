@@ -1,4 +1,4 @@
-from ..models.py import Metric, Record
+from ..models import Metric, Record
 
 class RecordHandler:
     def __init__(self, metric_names_to_create = []):
@@ -8,8 +8,8 @@ class RecordHandler:
     #Create a record with metrics matching those in *this
     def create_record(self):
         ret = Record()
-        ret.create_metrics([m.name for m in self.metrics_buffer])
         ret.validate()
+        ret.create_metrics([m.name for m in self.metrics_buffer])
         return ret
 
     def get_last_record(self):
@@ -30,6 +30,17 @@ class RecordHandler:
     def save_records(self):
         for r in self.records:
             r.save()
+
+    def print_records(self):
+        for i,r in enumerate(self.records):
+            print("Record {i}")
+            print("Timestamp: {r.timestamp}")
+            print("Location: {r.location}")
+            for m in r.metrics:
+                print("Metric {m.name}")
+                print("  current value: {m.current_value}")
+                print("  total value: {m.total_value}")
+                print("  average value: {m.average_value}")
 
     def clean_data(self):
         self.records = [ r for r in self.records if r.is_valid ]

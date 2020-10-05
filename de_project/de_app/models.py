@@ -2,7 +2,7 @@ from django.db import models
 from datetime import datetime
 
 class Metric(models.Model):
-    name = models.CharField(default="INVALID_METRIC")
+    name = models.CharField(default="INVALID_METRIC", max_length=255)
     current_value = models.IntegerField(default=0)
     total_value = models.IntegerField(default=0)
     average_value = models.IntegerField(default=0)
@@ -14,6 +14,7 @@ class Metric(models.Model):
     def validate(self):
         #Other validation can be done here
         self.is_valid = True
+        self.save()
 
     def reset(self):
         self.current_value = 0
@@ -22,22 +23,23 @@ class Metric(models.Model):
 
 class Record(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True, blank=True)
-    location = models.CharField(default="")
+    location = models.CharField(default="", max_length=255)
     metrics = models.ManyToManyField(Metric)
     is_valid = False
 
     def validate(self):
         #Other validation can be done here
         self.is_valid = True
+        self.save()
 
     def create_metrics(self, metric_names_to_create = []):
         for n in metric_names_to_create:
             toAdd = Metric(name=n)
-            toAdd.validation()
-            metrics.add(toAdd)
+            toAdd.validate()
+            self.metrics.add(toAdd)
 
     def get_metric(self, metric_name):
-        for m in self.metrics:
+        for m in self.metrics.all():
             if m.name == metric_name:
                 return m
         return Metric()

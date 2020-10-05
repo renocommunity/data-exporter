@@ -36,6 +36,7 @@ GRANT ALL PRIVILEGES ON DATABASE $DE_PG_DB TO $DE_PG_USER;
 ALTER ROLE $DE_PG_USER SET client_encoding TO 'utf8';
 ALTER ROLE $DE_PG_USER SET default_transaction_isolation TO 'read committed';
 ALTER ROLE $DE_PG_USER SET timezone TO 'UTC';
+ALTER USER $DE_PG_USER CREATEDB;
 EOF
 chown postgres:postgres ./pg-setup.sql
 sudo -u postgres psql -f ./pg-setup.sql
