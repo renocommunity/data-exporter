@@ -6,14 +6,14 @@ class Metric(models.Model):
     current_value = models.IntegerField(default=0)
     total_value = models.IntegerField(default=0)
     average_value = models.IntegerField(default=0)
-    is_valid = False
+    # is_valid = False
 
     def __str__(self):
         return self.name
 
     def validate(self):
         #Other validation can be done here
-        self.is_valid = True
+        # self.is_valid = True
         self.save()
 
     def reset(self):
@@ -21,15 +21,21 @@ class Metric(models.Model):
         self.total_value = 0
         self.average_value = 0
 
+    def get_metric(metric_name, metrics):
+        for m in metrics:
+            if m.name == metric_name:
+                return m
+        raise ValueError("No Metric {metric_name} in {metrics}")
+
 class Record(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True, blank=True)
     location = models.CharField(default="", max_length=255)
     metrics = models.ManyToManyField(Metric)
-    is_valid = False
+    # is_valid = False
 
     def validate(self):
         #Other validation can be done here
-        self.is_valid = True
+        # self.is_valid = True
         self.save()
 
     def create_metrics(self, metric_names_to_create = []):
@@ -39,13 +45,10 @@ class Record(models.Model):
             self.metrics.add(toAdd)
 
     def get_metric(self, metric_name):
-        for m in self.metrics.all():
-            if m.name == metric_name:
-                return m
-        return Metric()
+        return Metric.get_metric(metric_name, self.metrics.all())
 
     def do_metrics_contain(self, metrics):
         for m in metrics:
-            if not get_metric(m.name).is_valid:
+            if self.get_metric(m.name).name == "INVALID_METRIC":
                 return False
         return True

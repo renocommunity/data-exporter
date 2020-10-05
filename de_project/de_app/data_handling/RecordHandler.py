@@ -1,9 +1,11 @@
 from ..models import Metric, Record
+from django.core import serializers
 
 class RecordHandler:
     def __init__(self, metric_names_to_create = []):
         self.records = []
-        self.metrics_buffer = [ Metric(name, True) for name in metric_names_to_create ]
+        self.metrics_buffer = [ Metric(name=n) for n in metric_names_to_create ]
+        print("RecordHandler metrics: " + serializers.serialize('json', self.metrics_buffer))
 
     #Create a record with metrics matching those in *this
     def create_record(self):
@@ -13,37 +15,35 @@ class RecordHandler:
         return ret
 
     def get_last_record(self):
-        return records[-1] if records else Record()
+        if self.records:
+            return self.records[-1]
+        raise ValueError("No Existing Records")
 
     #Add a record to *this
     def add_record(self, record):
         if not record.do_metrics_contain(self.metrics_buffer):
             raise ValueError("Data shape mismatch")
 
-        last_record = self.get_last_record()
-        for m in metrics_buffer:
+        try:
+            last_record_metrics = self.get_last_record().metrics.all()
+        except ValueError:
+            last_record_metrics = self.metrics_buffer
+        for m in self.metrics_buffer:
             current_metric = record.get_metric(m.name)
             #skipping validity checks because we can do that.
-            current_metric.total_value = last_record.get_metric(m.name).total_value + current_metric.current_value
+            current_metric.total_value = Metric.get_metric(m.name, last_record_metrics).total_value + current_metric.current_value
         self.records.append(record)
 
     def save_records(self):
         for r in self.records:
             r.save()
 
-    def print_records(self):
-        for i,r in enumerate(self.records):
-            print("Record {i}")
-            print("Timestamp: {r.timestamp}")
-            print("Location: {r.location}")
-            for m in r.metrics:
-                print("Metric {m.name}")
-                print("  current value: {m.current_value}")
-                print("  total value: {m.total_value}")
-                print("  average value: {m.average_value}")
+    def get_records_as_json(self):
+        ret = serializers.serialize('json', self.records)
+        return ret
 
     def clean_data(self):
-        self.records = [ r for r in self.records if r.is_valid ]
+        # self.records = [ r for r in self.records if r.is_valid ]
         self.records.sort(key=lambda r: r.timestamp)
 
     def calculate_trends(self, bin_days=7):
