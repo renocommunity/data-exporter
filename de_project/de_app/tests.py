@@ -1,7 +1,6 @@
 from django.test import TestCase
 from pprint import pprint
-from .models import Metric, Record
-from .data_handling.RecordHandler import RecordHandler
+from .models import Metric, Record, RecordHandler
 from django.core import serializers
 
 class RecordStorageTestCase(TestCase):
@@ -9,7 +8,8 @@ class RecordStorageTestCase(TestCase):
     def setUp(self):
         self.test_metric_names = ["test_metric"]
         self.metric_values = [ 3, 4, 3 ]
-        self.handler = RecordHandler(self.test_metric_names)
+        self.handler = RecordHandler(metric_names=self.test_metric_names)
+        self.handler.initialize()
         pass
 
     def areRecordsStoredSuccessfully(self):

@@ -1,5 +1,7 @@
 from django.db import models
-from datetime import datetime
+from django.contrib.postgres.fields import ArrayField
+from datetime import datetime, timedelta
+from django.core import serializers
 
 class Metric(models.Model):
     name = models.CharField(default="INVALID_METRIC", max_length=255)
@@ -41,10 +43,85 @@ class Record(models.Model):
             self.metrics.add(toAdd)
 
     def get_metric(self, metric_name):
-        return Metric.get_metric(metric_name, self.metrics.all())
+        return Metric.get_metric(metric_name, self.get_all_metrics())
+
+    def get_all_metrics(self):
+        return self.metrics.all()
 
     def do_metrics_contain(self, metrics):
         for m in metrics:
             if self.get_metric(m.name).name == "INVALID_METRIC":
                 return False
         return True
+
+class RecordHandler(models.Model):
+    records = models.ManyToManyField(Record)
+    metric_names = ArrayField(models.CharField(max_length=255))
+    name = models.CharField(default="Record_Handler", max_length=255)
+
+    def initialize(self):
+        self.save()
+        self.create_metrics_buffer()
+
+    def create_metrics_buffer(self):
+        self.metrics_buffer = [ Metric(name=n) for n in self.metric_names ]
+        # print("RecordHandler metrics: " + serializers.serialize('json', self.metrics_buffer))
+
+    #Create a record with metrics matching those in *this
+    def create_record(self):
+        ret = Record()
+        ret.validate()
+        ret.create_metrics([m.name for m in self.metrics_buffer])
+        return ret
+
+    def get_last_record(self):
+        if self.get_all_records():
+            return self.get_all_records()[-1]
+        raise ValueError("No Existing Records")
+
+    #Add a record to *this
+    def add_record(self, record):
+        if not record.do_metrics_contain(self.metrics_buffer):
+            raise ValueError("Data shape mismatch")
+
+        try:
+            last_record_metrics = self.get_last_record().metrics
+        except ValueError:
+            last_record_metrics = self.metrics_buffer
+        for m in self.metrics_buffer:
+            current_metric = record.get_metric(m.name)
+            #skipping validity checks because we can do that.
+            current_metric.total_value = Metric.get_metric(m.name, last_record_metrics).total_value + current_metric.current_value
+        self.records.add(record)
+
+    def save_records(self):
+        for r in self.get_all_records():
+            r.save()
+
+    def get_all_records(self):
+        return self.records.all()
+
+    def get_records_as_json(self):
+        ret = serializers.serialize('json', self.get_all_records())
+        return ret
+
+    def clean_data(self):
+        #TODO: Sort data?
+        pass
+
+    def calculate_trends(self, bin_days=7):
+        self.clean_data() # needs to be done first
+        
+        #calculate moving average of bin_days
+        for r in self.get_all_records():
+            first_record_timestamp = r.timestamp - timedelta(days = bin_days)
+            #TODO: this will be slow on large data sets.
+            record_subset = [ r for r in self.get_all_records() if r.timestamp > first_record_timestamp and r.timestamp <= r.timestamp ]
+            for m in self.metrics_buffer:
+                m.reset()
+                for s in record_subset:
+                    m.total_value += s.get_metric(m.name).current_value
+                current_metric = r.get_metric(m.name)
+                current_metric.average_value = current_metric.current_value
+                if m.total_value:
+                     current_metric.average_value /= m.total_value
