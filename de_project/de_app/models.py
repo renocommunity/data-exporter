@@ -70,6 +70,20 @@ class RecordSerializer(serializers.ModelSerializer):
         #We'll ignore location for now.
         fields = ["timestamp", "metrics"]
 
+    #Flatten the metrics for easier use in tables.
+    def to_representation(self, obj):
+        representation = super().to_representation(obj)
+        metrics_representation = representation.pop('metrics')
+        for m in metrics_representation:
+            prefix = m.get('name') + '_'
+            for val in [ 'current_value', 'total_value', 'average_value' ]:
+                repkey = prefix + val
+                representation[repkey] = m.get(val)
+
+
+        return representation
+
+
 
 class RecordHandler(models.Model):
     records = models.ManyToManyField(Record)

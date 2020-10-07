@@ -6,7 +6,7 @@ from django.core import serializers
 class RecordStorageTestCase(TestCase):
 
     def setUp(self):
-        self.test_metric_names = ["test_metric"]
+        self.test_metric_names = ["test_metric", "another_test_metric"]
         self.metric_values = [ 3, 4, 3 ]
         self.handler = RecordHandler(metric_names=self.test_metric_names)
         self.handler.initialize()
