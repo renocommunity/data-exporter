@@ -1,7 +1,8 @@
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from datetime import datetime, timedelta
-from django.core import serializers
+from rest_framework import serializers
+from rest_framework.renderers import JSONRenderer
 
 class Metric(models.Model):
     name = models.CharField(default="INVALID_METRIC", max_length=255)
@@ -26,6 +27,13 @@ class Metric(models.Model):
             if m.name == metric_name:
                 return m
         raise ValueError("No Metric {metric_name} in {metrics}")
+
+class MetricSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Metric
+        fields = ["name", "current_value", "total_value", "average_value"]
+
 
 class Record(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True, blank=True)
@@ -53,6 +61,15 @@ class Record(models.Model):
             if self.get_metric(m.name).name == "INVALID_METRIC":
                 return False
         return True
+
+class RecordSerializer(serializers.ModelSerializer):
+    metrics = MetricSerializer(read_only=True, many=True)
+
+    class Meta:
+        model = Record
+        #We'll ignore location for now.
+        fields = ["timestamp", "metrics"]
+
 
 class RecordHandler(models.Model):
     records = models.ManyToManyField(Record)
@@ -102,8 +119,7 @@ class RecordHandler(models.Model):
         return self.records.all()
 
     def get_records_as_json(self):
-        ret = serializers.serialize('json', self.get_all_records())
-        return ret
+        return JSONRenderer().render(RecordHandlerSerializer(self).data)
 
     def clean_data(self):
         #TODO: Sort data?
@@ -125,3 +141,10 @@ class RecordHandler(models.Model):
                 current_metric.average_value = current_metric.current_value
                 if m.total_value:
                      current_metric.average_value /= m.total_value
+
+class RecordHandlerSerializer(serializers.ModelSerializer):
+    records = RecordSerializer(read_only=True, many=True)
+
+    class Meta:
+        model = RecordHandler
+        fields = ["name", "records"]
