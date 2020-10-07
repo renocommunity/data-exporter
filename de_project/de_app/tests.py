@@ -7,7 +7,7 @@ class RecordStorageTestCase(TestCase):
 
     def setUp(self):
         self.test_metric_names = ["test_metric", "another_test_metric"]
-        self.metric_values = [ 3, 4, 3 ]
+        self.metric_values = [ 3, 44, 100 ]
         self.handler = RecordHandler(metric_names=self.test_metric_names)
         self.handler.initialize()
         pass
@@ -28,14 +28,14 @@ class RecordStorageTestCase(TestCase):
         
         #Make sure our test metrics were created and add values to them
         for i,n in enumerate(self.test_metric_names):
-            metric = test_record.get_metric(n)
-            metric.current_value = self.metric_values[0]
-            metric.total_value = self.metric_values[1]
-            metric.average_value = self.metric_values[2]
+            test_record.set_metric_value(n, "current_value", self.metric_values[0])
+            test_record.set_metric_value(n, "total_value", self.metric_values[1])
+            test_record.set_metric_value(n, "average_value", self.metric_values[2])
 
         self.handler.add_record(test_record)
 
         #Just make sure this doesn't auto-fail. We don't care if it works here.
+        #NOTE: THIS MAY CLOBBER VALUES SET ABOVE
         self.handler.calculate_trends()
 
         #Write our test data to the database

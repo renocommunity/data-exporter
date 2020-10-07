@@ -22,6 +22,32 @@ class Metric(models.Model):
         self.total_value = 0
         self.average_value = 0
 
+    def get_value_names(self):
+        return [ "current_value", "total_value", "average_value" ]
+
+    def set_value(self, value_name, value):
+        #TODO: make this dynamic? we might want more calculated metric values...
+        if value_name == "current_value":
+            self.current_value = value
+        elif value_name == "total_value":
+            self.total_value = value
+        elif value_name == "average_value":
+            self.average_value = value
+        else:
+            raise ValueError("No such value {value_name} in Metric {self.name}")
+        self.validate()
+
+    def get_value(self, value_name):
+        #TODO: make this dynamic? we might want more calculated metric values...
+        if value_name == "current_value":
+            return self.current_value
+        elif value_name == "total_value":
+            return self.total_value
+        elif value_name == "average_value":
+            return self.average_value
+        else:
+            raise ValueError("No such value {value_name} in Metric {self.name}")
+
     def get_metric(metric_name, metrics):
         for m in metrics:
             if m.name == metric_name:
@@ -49,6 +75,12 @@ class Record(models.Model):
             toAdd = Metric(name=n)
             toAdd.validate()
             self.metrics.add(toAdd)
+
+    def set_metric_value(self, metric_name, metric_value, value):
+        self.metrics.get(name=metric_name).set_value(metric_value, value)
+
+    def get_metric_value(self, metric_name, metric_value):
+        return self.metrics.get(name=metric_name).get_value(metric_value)
 
     def get_metric(self, metric_name):
         return Metric.get_metric(metric_name, self.get_all_metrics())
@@ -114,15 +146,6 @@ class RecordHandler(models.Model):
     def add_record(self, record):
         if not record.do_metrics_contain(self.metrics_buffer):
             raise ValueError("Data shape mismatch")
-
-        try:
-            last_record_metrics = self.get_last_record().metrics
-        except ValueError:
-            last_record_metrics = self.metrics_buffer
-        for m in self.metrics_buffer:
-            current_metric = record.get_metric(m.name)
-            #skipping validity checks because we can do that.
-            current_metric.total_value = Metric.get_metric(m.name, last_record_metrics).total_value + current_metric.current_value
         self.records.add(record)
 
     def save_records(self):
@@ -139,8 +162,23 @@ class RecordHandler(models.Model):
         #TODO: Sort data?
         pass
 
+    def reset_metrics_buffer(self):
+        for m in self.metrics_buffer:
+            m.reset()
+
     def calculate_trends(self, bin_days=7):
         self.clean_data() # needs to be done first
+
+        #calculate totals
+        #ASSUME: metrics are sorted. TODO: Are they?
+        self.reset_metrics_buffer()
+        previous_total = 0
+        new_total = 0
+        for r in self.get_all_records():
+            for m in self.metrics_buffer:
+                m.set_value("current_value", m.get_value("total_value") + r.get_metric_value(m.name, "current_value"))
+                r.set_metric_value(m.name, "total_value", m.get_value("current_value"))
+                m.set_value("total_value", m.get_value("current_value"))
         
         #calculate moving average of bin_days
         for r in self.get_all_records():
