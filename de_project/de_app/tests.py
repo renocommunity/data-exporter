@@ -2,13 +2,14 @@ from django.test import TestCase
 from pprint import pprint
 from .models import Metric, Record, RecordHandler
 from django.core import serializers
+from django.test import Client
 
 class RecordStorageTestCase(TestCase):
 
     def setUp(self):
         self.test_metric_names = ["test_metric", "another_test_metric"]
         self.metric_values = [ 3, 44, 100 ]
-        self.handler = RecordHandler(metric_names=self.test_metric_names)
+        self.handler = RecordHandler(name="test_record_handler", metric_names=self.test_metric_names)
         self.handler.initialize()
         pass
 
@@ -19,8 +20,11 @@ class RecordStorageTestCase(TestCase):
 
         return len(all_records) > 0 #TODO: check data
 
-    def test_storing_records(self):
+    def storing_records_test(self):
+        print("Test: storing_records_test")
+
         #Make sure we aren't using stale data
+        print("Pre-test data")
         self.assertFalse(self.areRecordsStoredSuccessfully())
 
         #Create a test record. This may or may not be stored.
@@ -42,4 +46,17 @@ class RecordStorageTestCase(TestCase):
         self.handler.save_records()
 
         #Check if we successfully stored data
+        print("Post-test data")
         self.assertTrue(self.areRecordsStoredSuccessfully())
+
+    def get_records_test(self):
+        print("Test: get_records_test")
+        
+        client = Client()
+        response = client.get('/test_record_handler/data-as-json-file')
+        self.assertEqual(response.status_code, 200)
+        print(response.content)
+
+    def test_all_in_order(self):
+        self.storing_records_test()
+        self.get_records_test()

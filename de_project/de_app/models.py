@@ -158,6 +158,10 @@ class RecordHandler(models.Model):
     def get_records_as_json(self):
         return JSONRenderer().render(RecordHandlerSerializer(self).data)
 
+    #Delete all records in *this
+    def clear_records(self):
+        self.records.all().delete()
+
     def clean_data(self):
         #TODO: Sort data?
         pass
