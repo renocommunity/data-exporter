@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup as BS
 from ..models import RecordHandler, Record, Metric
+import requests
 
 
 ####                   THIS IS EXAMPLE ONLY

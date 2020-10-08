@@ -3,6 +3,9 @@ from pprint import pprint
 from .models import Metric, Record, RecordHandler
 from django.core import serializers
 from django.test import Client
+import logging
+
+logger = logging.getLogger(__name__)
 
 class RecordStorageTestCase(TestCase):
 
@@ -11,21 +14,21 @@ class RecordStorageTestCase(TestCase):
         self.metric_values = [ 3, 44, 100 ]
         self.handler = RecordHandler(name="test_record_handler", metric_names=self.test_metric_names)
         self.handler.initialize()
-        pass
+        self.client = Client()
 
-    def areRecordsStoredSuccessfully(self):
+    def are_records_stored_successfully(self):
         all_records = Record.objects.all()
 
-        print(self.handler.get_records_as_json())
+        logger.debug(self.handler.get_records_as_json())
 
         return len(all_records) > 0 #TODO: check data
 
     def storing_records_test(self):
-        print("Test: storing_records_test")
+        logger.info("Test: storing_records_test")
 
         #Make sure we aren't using stale data
-        print("Pre-test data")
-        self.assertFalse(self.areRecordsStoredSuccessfully())
+        logger.debug("Pre-test data")
+        self.assertFalse(self.are_records_stored_successfully())
 
         #Create a test record. This may or may not be stored.
         test_record = self.handler.create_record()
@@ -46,17 +49,23 @@ class RecordStorageTestCase(TestCase):
         self.handler.save_records()
 
         #Check if we successfully stored data
-        print("Post-test data")
-        self.assertTrue(self.areRecordsStoredSuccessfully())
+        logger.debug("Post-test data")
+        self.assertTrue(self.are_records_stored_successfully())
 
     def get_records_test(self):
-        print("Test: get_records_test")
-        
-        client = Client()
-        response = client.get('/test_record_handler/data-as-json-file')
+        logger.info("Test: get_records_test")
+
+        response = self.client.get('/test_record_handler/data-file.json')
         self.assertEqual(response.status_code, 200)
-        print(response.content)
+        logger.debug(response.content)
+
+    def get_invalid_records_test(self):
+        logger.info("Test: get_records_test")
+
+        response = self.client.get('/invalid_record_handler/data-file.json')
+        self.assertEqual(response.status_code, 404)
 
     def test_all_in_order(self):
         self.storing_records_test()
+        self.get_invalid_records_test()
         self.get_records_test()

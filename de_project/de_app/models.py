@@ -34,7 +34,7 @@ class Metric(models.Model):
         elif value_name == "average_value":
             self.average_value = value
         else:
-            raise ValueError("No such value {value_name} in Metric {self.name}")
+            raise ValueError(f"No such value {value_name} in Metric {self.name}")
         self.validate()
 
     def get_value(self, value_name):
@@ -46,13 +46,14 @@ class Metric(models.Model):
         elif value_name == "average_value":
             return self.average_value
         else:
-            raise ValueError("No such value {value_name} in Metric {self.name}")
+            raise ValueError(f"No such value {value_name} in Metric {self.name}")
 
+    @staticmethod
     def get_metric(metric_name, metrics):
         for m in metrics:
             if m.name == metric_name:
                 return m
-        raise ValueError("No Metric {metric_name} in {metrics}")
+        raise ValueError(f"No Metric {metric_name} in {metrics}")
 
 class MetricSerializer(serializers.ModelSerializer):
 
@@ -128,7 +129,6 @@ class RecordHandler(models.Model):
 
     def create_metrics_buffer(self):
         self.metrics_buffer = [ Metric(name=n) for n in self.metric_names ]
-        # print("RecordHandler metrics: " + serializers.serialize('json', self.metrics_buffer))
 
     #Create a record with metrics matching those in *this
     def create_record(self):
